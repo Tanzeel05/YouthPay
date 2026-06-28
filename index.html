@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>YouthPay – Haniya's Finance Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;transition:background .25s,color .25s,border-color .25s}
+body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;font-size:14px}
+/* ── DARK MODE (default) ── */
+body.dark{background:#0d1117;color:#e6edf3}
+body.dark .card{background:#161b22;border:1px solid #30363d}
+body.dark .card-inner{background:#0d1117;border:1px solid #21262d}
+body.dark header{background:rgba(13,17,23,.95);border-bottom:1px solid #30363d}
+body.dark .pill{background:#21262d;color:#8b949e}
+body.dark .pill.active{background:#6366f1;color:#fff}
+body.dark .tx-row{background:#161b22;border:1px solid #21262d}
+body.dark .tx-row:hover{background:#1f2937}
+body.dark input,body.dark select{background:#161b22;border:1px solid #30363d;color:#e6edf3}
+body.dark .modal-bg{background:rgba(0,0,0,.8)}
+body.dark .modal{background:#161b22;border:1px solid #30363d}
+body.dark .tab{color:#8b949e}
+body.dark .tab.active{color:#6366f1;border-bottom:2px solid #6366f1}
+body.dark .sep{background:#30363d}
+body.dark .muted{color:#8b949e}
+body.dark .sub{color:#adbac7}
+body.dark .toggle-btn{background:#21262d;border:1px solid #30363d;color:#8b949e}
+body.dark .toggle-btn.on{background:#6366f120;border-color:#6366f1;color:#6366f1}
+/* ── LIGHT MODE ── */
+body.light{background:#f6f8fa;color:#1f2328}
+body.light .card{background:#ffffff;border:1px solid #d0d7de}
+body.light .card-inner{background:#f6f8fa;border:1px solid #d0d7de}
+body.light header{background:rgba(246,248,250,.96);border-bottom:1px solid #d0d7de}
+body.light .pill{background:#f0f2f5;color:#57606a}
+body.light .pill.active{background:#6366f1;color:#fff}
+body.light .tx-row{background:#fff;border:1px solid #d0d7de}
+body.light .tx-row:hover{background:#f6f8fa}
+body.light input,body.light select{background:#fff;border:1px solid #d0d7de;color:#1f2328}
+body.light .modal-bg{background:rgba(0,0,0,.5)}
+body.light .modal{background:#fff;border:1px solid #d0d7de}
+body.light .tab{color:#57606a}
+body.light .tab.active{color:#6366f1;border-bottom:2px solid #6366f1}
+body.light .sep{background:#d0d7de}
+body.light .muted{color:#57606a}
+body.light .sub{color:#424a53}
+body.light .toggle-btn{background:#f0f2f5;border:1px solid #d0d7de;color:#57606a}
+body.light .toggle-btn.on{background:#6366f120;border-color:#6366f1;color:#6366f1}
+
+header{position:sticky;top:0;z-index:100;padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;backdrop-filter:blur(10px)}
+.logo{display:flex;align-items:center;gap:.5rem;font-weight:800;font-size:1.05rem}
+.logo-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#22d3ee);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.header-right{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .9rem;border-radius:8px;border:none;cursor:pointer;font-size:.78rem;font-weight:600}
+.btn-primary{background:#6366f1;color:#fff}
+.btn-primary:hover{background:#4f46e5}
+.btn-sm{padding:.35rem .7rem;font-size:.72rem;border-radius:7px}
+.toggle-btn{padding:.35rem .75rem;border-radius:7px;cursor:pointer;font-size:.72rem;font-weight:600}
+
+main{max-width:960px;margin:0 auto;padding:1rem;display:flex;flex-direction:column;gap:1rem}
+.card{border-radius:14px;padding:1.1rem}
+.card-inner{border-radius:10px;padding:.85rem}
+.card h3{font-size:.85rem;font-weight:600;margin-bottom:.75rem}
+.muted{font-size:.72rem}
+.sub{font-size:.8rem}
+
+/* Balance hero */
+.balance-hero{background:linear-gradient(135deg,#13103a,#0f1e3d);border:1px solid #2a2060;border-radius:16px;padding:1.25rem;position:relative;overflow:hidden}
+.balance-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:#6366f110}
+.balance-hero::after{content:'';position:absolute;bottom:-30px;right:60px;width:80px;height:80px;border-radius:50%;background:#22d3ee08}
+.balance-label{color:#94a3b8;font-size:.72rem;margin-bottom:.25rem}
+.balance-amount{font-size:1.9rem;font-weight:800;margin-bottom:.75rem}
+.balance-row{display:flex;gap:1.25rem;flex-wrap:wrap}
+.balance-stat{display:flex;flex-direction:column;gap:.2rem}
+.balance-stat .lbl{font-size:.7rem}
+.balance-stat .val{font-weight:700;font-size:.9rem;color:#f1f5f9}
+
+/* Grid layouts */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+@media(max-width:600px){.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr 1fr}}
+
+/* Category bars */
+.cat-bar-wrap{margin-bottom:.65rem}
+.cat-bar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem}
+.cat-icon-name{display:flex;align-items:center;gap:.5rem}
+.cat-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+.bar-bg{height:5px;border-radius:3px;background:#1f2937;overflow:hidden;margin-top:.25rem}
+.bar-fill{height:100%;border-radius:3px;transition:width .7s ease}
+
+/* Insight cards */
+.insight{display:flex;gap:.65rem;border-radius:10px;padding:.75rem .9rem;margin-bottom:.5rem}
+.insight-emoji{font-size:1.2rem;flex-shrink:0;margin-top:1px}
+.insight-title{font-weight:600;font-size:.82rem;margin-bottom:.25rem}
+.insight-desc{font-size:.76rem;line-height:1.5}
+.badge{font-size:.65rem;padding:2px 7px;border-radius:999px;margin-left:.4rem;font-weight:600}
+
+/* Transactions */
+.tx-filter{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem}
+.tx-row{display:flex;align-items:center;gap:.65rem;border-radius:9px;padding:.6rem .75rem;margin-bottom:.35rem;cursor:default}
+.tx-icon{width:33px;height:33px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.tx-merchant{font-weight:500;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-meta{font-size:.7rem;margin-top:1px}
+.tx-amount{font-weight:700;font-size:.85rem;text-align:right;flex-shrink:0}
+.tx-cat{font-size:.68rem;text-align:right;margin-top:1px}
+.tx-badge{font-size:.62rem;padding:1px 5px;border-radius:4px;background:#ef444420;color:#ef4444;margin-left:4px}
+.show-more{width:100%;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:500;cursor:pointer;border:none;margin-top:.35rem;opacity:.7}
+body.dark .show-more{background:#1f2937;color:#94a3b8}
+body.light .show-more{background:#f0f2f5;color:#57606a}
+
+/* Health ring */
+.ring-wrap{display:flex;flex-direction:column;align-items:center;gap:.5rem}
+.ring-label{font-size:.68rem;text-align:center;max-width:110px;line-height:1.4}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid transparent;margin-bottom:.75rem}
+body.dark .tabs{border-bottom-color:#30363d}
+body.light .tabs{border-bottom-color:#d0d7de}
+.tab{padding:.5rem .9rem;font-size:.8rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none}
+
+/* Upload zone */
+.upload-zone{border:2px dashed #30363d;border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover,.upload-zone.drag{border-color:#6366f1;background:#6366f110}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal{border-radius:16px;padding:1.25rem;width:100%;max-width:420px;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem}
+.close-btn{background:none;border:none;cursor:pointer;font-size:1.1rem;padding:2px 6px;border-radius:5px;opacity:.6}
+.close-btn:hover{opacity:1}
+
+/* Chart container */
+.chart-box{position:relative;height:180px}
+
+/* Separator */
+.sep{height:1px;margin:.75rem 0}
+
+/* Switches in header */
+.mode-switch{display:flex;gap:.3rem;align-items:center}
+
+/* Parent view notice */
+.parent-banner{background:linear-gradient(135deg,#0f4c2a,#0a3d1f);border:1px solid #166534;border-radius:10px;padding:.6rem .9rem;display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:#4ade80;margin-bottom:.5rem}
+
+.alert-box{border-radius:10px;padding:.65rem .85rem;display:flex;align-items:flex-start;gap:.5rem;font-size:.76rem;margin-bottom:.5rem}
+</style>
+</head>
+<body class="dark">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💳</div>
+    <div>
+      <span>YouthPay</span>
+      <span id="userNameBadge" style="font-size:.68rem;font-weight:400;opacity:.6;margin-left:.35rem">Haniya Ahmed</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <!-- Parent/Teen toggle -->
+    <button class="toggle-btn" id="viewToggle" onclick="toggleView()" title="Switch between teen and parent view">👤 Teen View</button>
+    <!-- Dark/Light toggle -->
+    <button class="toggle-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark/light mode">🌙 Dark</button>
+    <!-- Import -->
+    <button class="btn btn-primary btn-sm" onclick="openModal()">📂 Import</button>
+  </div>
+</header>
+
+<main>
+  <div id="parentBanner" style="display:none" class="parent-banner">
+    🛡️ Parent View — You are seeing Haniya's full financial summary as a guardian.
+  </div>
+
+  <!-- Balance Hero -->
+  <div class="balance-hero">
+    <div class="balance-label">💰 Current Balance</div>
+    <div class="balance-amount" id="balanceAmt">—</div>
+    <div class="balance-row">
+      <div class="balance-stat">
+        <span class="lbl" style="color:#4ade80">↑ Money In</span>
+        <span class="val" id="totalIn">—</span>
+      </div>
+      <div style="width:1px;background:#ffffff15;align-self:stretch"></div>
+      <div class="balance-stat">
+        <span class="lbl" style="color:#f87171">↓ Money Out</span>
+        <span class="val" id="totalOut">—</span>
+      </div>
+      <div style="width:1px;background:#ffffff15;align-self:stretch"></div>
+      <div class="balance-stat">
+        <span class="lbl" style="color:#fbbf24">🎯 Saved</span>
+        <span class="val" id="savedPct">—</span>
+      </div>
+      <div style="width:1px;background:#ffffff15;align-self:stretch"></div>
+      <div class="balance-stat">
+        <span class="lbl" style="color:#94a3b8"># Transactions</span>
+        <span class="val" id="txCount">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Health + Categories -->
+  <div class="grid-2">
+    <!-- Health Score -->
+    <div class="card">
+      <h3>⭐ Financial Health Score</h3>
+      <div class="ring-wrap">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#1f2937" stroke-width="10"/>
+          <circle id="healthRing" cx="60" cy="60" r="50" fill="none" stroke="#6366f1" stroke-width="10"
+            stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314"
+            transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 1s ease"/>
+          <text id="healthScore" x="60" y="56" text-anchor="middle" font-size="22" font-weight="700" fill="#6366f1" font-family="Segoe UI,system-ui">—</text>
+          <text x="60" y="72" text-anchor="middle" font-size="10" fill="#64748b" font-family="Segoe UI,system-ui">/ 100</text>
+        </svg>
+        <span id="healthLabel" style="font-size:.72rem;padding:2px 10px;border-radius:999px;background:#6366f120;color:#6366f1;font-weight:600">—</span>
+        <p class="ring-label muted" id="healthHint">Based on savings vs spending habits</p>
+      </div>
+    </div>
+
+    <!-- Spending Breakdown -->
+    <div class="card">
+      <h3>📊 Where Money Goes</h3>
+      <div id="catBars"></div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('trend')">📈 Daily Spending</button>
+      <button class="tab" onclick="switchTab('pie')">🍩 Categories</button>
+      <button class="tab" onclick="switchTab('merchants')">🏪 Top Places</button>
+    </div>
+    <div id="tabTrend" class="chart-box"><canvas id="trendChart"></canvas></div>
+    <div id="tabPie" class="chart-box" style="display:none"><canvas id="pieChart"></canvas></div>
+    <div id="tabMerchants" class="chart-box" style="display:none"><canvas id="merchantChart"></canvas></div>
+  </div>
+
+  <!-- Insights -->
+  <div class="card">
+    <h3>💡 What We Noticed <span class="muted" id="insightCount"></span></h3>
+    <div id="insightsList"></div>
+  </div>
+
+  <!-- Transactions -->
+  <div class="card">
+    <h3>📋 Transactions <span class="muted" id="txTotal"></span></h3>
+    <div class="tx-filter" id="txFilter"></div>
+    <div id="txList"></div>
+    <button class="show-more" id="showMoreBtn" onclick="toggleShowAll()" style="display:none"></button>
+  </div>
+
+  <p style="text-align:center;font-size:.7rem;opacity:.4;padding-bottom:1rem">YouthPay · Pakistani Financial Intelligence · Karachi</p>
+</main>
+
+<!-- Import Modal -->
+<div class="modal-bg" id="modalBg" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div style="font-weight:700;font-size:.95rem;margin-bottom:.2rem">Import Transactions</div>
+        <div class="muted">Upload your bank statement or email</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <input type="file" id="fileInput" style="display:none" accept=".xlsx,.xls,.csv,.eml,.txt" onchange="handleFile(this.files[0])"/>
+      <div id="uploadContent">
+        <div style="font-size:2rem;margin-bottom:.5rem">📂</div>
+        <div style="font-weight:600;font-size:.85rem;margin-bottom:.25rem">Click or drag file here</div>
+        <div class="muted">Excel (.xlsx, .csv) or Bank Email (.eml)</div>
+      </div>
+    </div>
+
+    <div id="uploadResult" style="margin-top:.75rem;display:none"></div>
+
+    <div class="sep"></div>
+
+    <!-- Manual entry -->
+    <div style="font-weight:600;font-size:.82rem;margin-bottom:.6rem">➕ Add Transaction Manually</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem">
+      <div>
+        <div class="muted" style="margin-bottom:.2rem">Merchant / Where</div>
+        <input id="mMerchant" type="text" placeholder="e.g. KFC" style="width:100%;padding:.4rem .6rem;border-radius:7px;font-size:.8rem"/>
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:.2rem">Amount (PKR)</div>
+        <input id="mAmount" type="number" placeholder="e.g. 850" style="width:100%;padding:.4rem .6rem;border-radius:7px;font-size:.8rem"/>
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:.2rem">Type</div>
+        <select id="mType" style="width:100%;padding:.4rem .6rem;border-radius:7px;font-size:.8rem">
+          <option value="debit">Debit (Spent)</option>
+          <option value="credit">Credit (Received)</option>
+        </select>
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:.2rem">Category</div>
+        <select id="mCat" style="width:100%;padding:.4rem .6rem;border-radius:7px;font-size:.8rem">
+          <option value="Food">🍔 Food</option>
+          <option value="Coffee">☕ Coffee</option>
+          <option value="Beauty">💄 Beauty</option>
+          <option value="Lifestyle">🛍️ Lifestyle</option>
+          <option value="Entertainment">🎬 Entertainment</option>
+          <option value="Transport">🚗 Transport</option>
+          <option value="Education">📚 Education</option>
+          <option value="Utilities">💡 Utilities</option>
+          <option value="Transfer">💸 Transfer</option>
+          <option value="Allowance">💰 Allowance</option>
+          <option value="Other">📦 Other</option>
+        </select>
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:.2rem">Bank / Source</div>
+        <input id="mBank" type="text" placeholder="e.g. HBL" style="width:100%;padding:.4rem .6rem;border-radius:7px;font-size:.8rem"/>
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:.2rem">Date & Time</div>
+        <input id="mDate" type="datetime-local" style="width:100%;padding:.4rem .6rem;border-radius:7px;font-size:.8rem"/>
+      </div>
+    </div>
+    <div>
+      <div class="muted" style="margin-bottom:.2rem">Note / SMS text (optional)</div>
+      <input id="mNote" type="text" placeholder="Paste bank SMS here to auto-parse..." style="width:100%;padding:.4rem .6rem;border-radius:7px;font-size:.8rem" oninput="autoParseNote(this.value)"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.65rem;justify-content:center;font-size:.82rem" onclick="addManual()">Add Transaction</button>
+    <div id="manualResult" style="margin-top:.5rem;font-size:.76rem"></div>
+  </div>
+</div>
+
+<script>
+// ── Embedded dataset ──────────────────────────────────────────────────────────
+const HANIYA_DATA = [{"id":0,"date":"2026-06-01 09:00","bank":"Meezan","note":"PKR 10,000 credited from Parents (Pocket Money)","merchant":"Pocket Money","amount":10000.0,"type":"credit","method":"IBFT","category":"Allowance","city":"Karachi"},{"id":1,"date":"2026-06-01 13:00","bank":"UBL","note":"Txn Alert: Rs 1701 spent at MINISO PK","merchant":"MINISO PK","amount":1701.0,"type":"debit","method":"ATM","category":"Lifestyle","city":"Karachi"},{"id":2,"date":"2026-06-01 15:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 431 spent at Easyload","merchant":"Easyload","amount":431.0,"type":"debit","method":"ATM","category":"Utilities","city":"Karachi"},{"id":3,"date":"2026-06-01 15:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 489 spent at Easyload","merchant":"Easyload","amount":489.0,"type":"debit","method":"App","category":"Utilities","city":"Karachi"},{"id":4,"date":"2026-06-01 19:00","bank":"UBL","note":"Txn Alert: Rs 377 spent at Yango","merchant":"Yango","amount":377.0,"type":"debit","method":"Card","category":"Transport","city":"Karachi"},{"id":5,"date":"2026-06-01 23:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 653 spent at MINISO Lucky One","merchant":"MINISO Lucky One","amount":653.0,"type":"debit","method":"Wallet","category":"Lifestyle","city":"Karachi"},{"id":6,"date":"2026-06-01 23:00","bank":"JazzCash","note":"Txn Alert: Rs 1408 spent at Bagallery","merchant":"Bagallery","amount":1408.0,"type":"debit","method":"IBFT","category":"Beauty","city":"Karachi"},{"id":7,"date":"2026-06-02 02:00","bank":"Meezan","note":"Txn Alert: Rs 1188 spent at WB by Hemani","merchant":"WB by Hemani","amount":1188.0,"type":"debit","method":"ATM","category":"Beauty","city":"Karachi"},{"id":8,"date":"2026-06-02 03:00","bank":"UBL","note":"Txn Alert: Rs 2078 spent at Bagallery","merchant":"Bagallery","amount":2078.0,"type":"debit","method":"App","category":"Beauty","city":"Karachi"},{"id":9,"date":"2026-06-02 06:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 311 spent at Easyload","merchant":"Easyload","amount":311.0,"type":"debit","method":"Wallet","category":"Utilities","city":"Karachi"},{"id":10,"date":"2026-06-02 07:00","bank":"NayaPay","note":"Txn Alert: Rs 533 spent at inDrive","merchant":"inDrive","amount":533.0,"type":"debit","method":"App","category":"Transport","city":"Karachi"},{"id":11,"date":"2026-06-02 15:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 836 spent at Liberty Books","merchant":"Liberty Books","amount":836.0,"type":"debit","method":"ATM","category":"Education","city":"Karachi"},{"id":12,"date":"2026-06-02 16:00","bank":"JazzCash","note":"Txn Alert: Rs 313 spent at Easyload","merchant":"Easyload","amount":313.0,"type":"debit","method":"ATM","category":"Utilities","city":"Karachi"},{"id":13,"date":"2026-06-02 22:00","bank":"Meezan","note":"Txn Alert: Rs 196 spent at School Cafeteria","merchant":"School Cafeteria","amount":196.0,"type":"debit","method":"IBFT","category":"Food","city":"Karachi"},{"id":14,"date":"2026-06-03 07:00","bank":"UBL","note":"Txn Alert: Rs 474 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":474.0,"type":"debit","method":"IBFT","category":"Coffee","city":"Karachi"},{"id":15,"date":"2026-06-03 14:00","bank":"HBL","note":"Txn Alert: Rs 425 spent at inDrive","merchant":"inDrive","amount":425.0,"type":"debit","method":"QR","category":"Transport","city":"Karachi"},{"id":16,"date":"2026-06-03 19:00","bank":"JazzCash","note":"Txn Alert: Rs 521 spent at inDrive","merchant":"inDrive","amount":521.0,"type":"debit","method":"QR","category":"Transport","city":"Karachi"},{"id":17,"date":"2026-06-03 21:00","bank":"JazzCash","note":"Txn Alert: Rs 1110 spent at MINISO PK","merchant":"MINISO PK","amount":1110.0,"type":"debit","method":"App","category":"Lifestyle","city":"Karachi"},{"id":18,"date":"2026-06-04 05:00","bank":"Meezan","note":"Txn Alert: Rs 459 spent at Yango","merchant":"Yango","amount":459.0,"type":"debit","method":"ATM","category":"Transport","city":"Karachi"},{"id":19,"date":"2026-06-04 07:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 787 spent at KFC","merchant":"KFC","amount":787.0,"type":"debit","method":"IBFT","category":"Food","city":"Karachi"},{"id":20,"date":"2026-06-04 08:00","bank":"UBL","note":"Txn Alert: Rs 1275 spent at MINISO PK","merchant":"MINISO PK","amount":1275.0,"type":"debit","method":"IBFT","category":"Lifestyle","city":"Karachi"},{"id":21,"date":"2026-06-04 14:00","bank":"UBL","note":"Txn Alert: Rs 277 spent at inDrive","merchant":"inDrive","amount":277.0,"type":"debit","method":"IBFT","category":"Transport","city":"Karachi"},{"id":22,"date":"2026-06-04 22:00","bank":"Meezan","note":"Txn Alert: Rs 407 spent at Yango","merchant":"Yango","amount":407.0,"type":"debit","method":"Card","category":"Transport","city":"Karachi"},{"id":23,"date":"2026-06-04 22:00","bank":"JazzCash","note":"Txn Alert: Rs 1596 spent at KFC","merchant":"KFC","amount":1596.0,"type":"debit","method":"ATM","category":"Food","city":"Karachi"},{"id":24,"date":"2026-06-05 07:00","bank":"NayaPay","note":"Txn Alert: Rs 1760 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1760.0,"type":"debit","method":"Card","category":"Entertainment","city":"Karachi"},{"id":25,"date":"2026-06-05 12:00","bank":"Easypaisa","note":"Txn Alert: Rs 951 spent at Liberty Books","merchant":"Liberty Books","amount":951.0,"type":"debit","method":"QR","category":"Education","city":"Karachi"},{"id":26,"date":"2026-06-05 19:00","bank":"Meezan","note":"Txn Alert: Rs 1442 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1442.0,"type":"debit","method":"IBFT","category":"Entertainment","city":"Karachi"},{"id":27,"date":"2026-06-05 20:00","bank":"UBL","note":"Txn Alert: Rs 1467 spent at Liberty Books","merchant":"Liberty Books","amount":1467.0,"type":"debit","method":"QR","category":"Education","city":"Karachi"},{"id":28,"date":"2026-06-05 20:00","bank":"HBL","note":"Txn Alert: Rs 1154 spent at WB by Hemani","merchant":"WB by Hemani","amount":1154.0,"type":"debit","method":"Card","category":"Beauty","city":"Karachi"},{"id":29,"date":"2026-06-06 09:00","bank":"NayaPay","note":"Txn Alert: Rs 262 spent at inDrive","merchant":"inDrive","amount":262.0,"type":"debit","method":"QR","category":"Transport","city":"Karachi"},{"id":30,"date":"2026-06-06 15:00","bank":"JazzCash","note":"Txn Alert: Rs 526 spent at inDrive","merchant":"inDrive","amount":526.0,"type":"debit","method":"Card","category":"Transport","city":"Karachi"},{"id":31,"date":"2026-06-06 22:00","bank":"JazzCash","note":"Txn Alert: Rs 479 spent at WB by Hemani","merchant":"WB by Hemani","amount":479.0,"type":"debit","method":"ATM","category":"Beauty","city":"Karachi"},{"id":32,"date":"2026-06-07 08:00","bank":"JazzCash","note":"Txn Alert: Rs 1088 spent at KFC","merchant":"KFC","amount":1088.0,"type":"debit","method":"QR","category":"Food","city":"Karachi"},{"id":33,"date":"2026-06-07 11:00","bank":"JazzCash","note":"Txn Alert: Rs 321 spent at Chai Spot","merchant":"Chai Spot","amount":321.0,"type":"debit","method":"QR","category":"Coffee","city":"Karachi"},{"id":34,"date":"2026-06-07 13:00","bank":"NayaPay","note":"Txn Alert: Rs 874 spent at MINISO PK","merchant":"MINISO PK","amount":874.0,"type":"debit","method":"IBFT","category":"Lifestyle","city":"Karachi"},{"id":35,"date":"2026-06-07 18:00","bank":"Meezan","note":"Txn Alert: Rs 1008 spent at WB by Hemani","merchant":"WB by Hemani","amount":1008.0,"type":"debit","method":"Wallet","category":"Beauty","city":"Karachi"},{"id":36,"date":"2026-06-08 05:00","bank":"Easypaisa","note":"Txn Alert: Rs 666 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":666.0,"type":"debit","method":"IBFT","category":"Coffee","city":"Karachi"},{"id":37,"date":"2026-06-08 11:00","bank":"UBL","note":"Txn Alert: Rs 502 spent at inDrive","merchant":"inDrive","amount":502.0,"type":"debit","method":"Card","category":"Transport","city":"Karachi"},{"id":38,"date":"2026-06-09 01:00","bank":"HBL","note":"Txn Alert: Rs 216 spent at Easyload","merchant":"Easyload","amount":216.0,"type":"debit","method":"Card","category":"Utilities","city":"Karachi"},{"id":39,"date":"2026-06-09 05:00","bank":"HBL","note":"Txn Alert: Rs 870 spent at MINISO PK","merchant":"MINISO PK","amount":870.0,"type":"debit","method":"QR","category":"Lifestyle","city":"Karachi"},{"id":40,"date":"2026-06-09 06:00","bank":"NayaPay","note":"Txn Alert: Rs 1326 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1326.0,"type":"debit","method":"IBFT","category":"Entertainment","city":"Karachi"},{"id":41,"date":"2026-06-09 09:00","bank":"NayaPay","note":"Txn Alert: Rs 629 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":629.0,"type":"debit","method":"Card","category":"Coffee","city":"Karachi"},{"id":42,"date":"2026-06-09 10:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 649 spent at Yango","merchant":"Yango","amount":649.0,"type":"debit","method":"QR","category":"Transport","city":"Karachi"},{"id":43,"date":"2026-06-09 16:00","bank":"Easypaisa","note":"Txn Alert: Rs 863 spent at OPTP","merchant":"OPTP","amount":863.0,"type":"debit","method":"Wallet","category":"Food","city":"Karachi"},{"id":44,"date":"2026-06-09 17:00","bank":"NayaPay","note":"Txn Alert: Rs 522 spent at Yango","merchant":"Yango","amount":522.0,"type":"debit","method":"IBFT","category":"Transport","city":"Karachi"},{"id":45,"date":"2026-06-10 00:00","bank":"UBL","note":"Txn Alert: Rs 527 spent at School Cafeteria","merchant":"School Cafeteria","amount":527.0,"type":"debit","method":"ATM","category":"Food","city":"Karachi"},{"id":46,"date":"2026-06-10 04:00","bank":"JazzCash","note":"Txn Alert: Rs 259 spent at Easyload","merchant":"Easyload","amount":259.0,"type":"debit","method":"Wallet","category":"Utilities","city":"Karachi"},{"id":47,"date":"2026-06-10 20:00","bank":"Easypaisa","note":"Txn Alert: Rs 263 spent at Easyload","merchant":"Easyload","amount":263.0,"type":"debit","method":"App","category":"Utilities","city":"Karachi"},{"id":48,"date":"2026-06-10 21:00","bank":"NayaPay","note":"Txn Alert: Rs 938 spent at Bagallery","merchant":"Bagallery","amount":938.0,"type":"debit","method":"IBFT","category":"Beauty","city":"Karachi"},{"id":49,"date":"2026-06-10 23:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1233 spent at KFC","merchant":"KFC","amount":1233.0,"type":"debit","method":"Wallet","category":"Food","city":"Karachi"},{"id":50,"date":"2026-06-11 01:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1499 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1499.0,"type":"debit","method":"Wallet","category":"Entertainment","city":"Karachi"},{"id":51,"date":"2026-06-11 09:00","bank":"HBL","note":"Txn Alert: Rs 729 spent at MINISO Lucky One","merchant":"MINISO Lucky One","amount":729.0,"type":"debit","method":"IBFT","category":"Lifestyle","city":"Karachi"},{"id":52,"date":"2026-06-11 13:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 270 spent at School Cafeteria","merchant":"School Cafeteria","amount":270.0,"type":"debit","method":"IBFT","category":"Food","city":"Karachi"},{"id":53,"date":"2026-06-12 03:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1510 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1510.0,"type":"debit","method":"Card","category":"Entertainment","city":"Karachi"},{"id":54,"date":"2026-06-12 11:00","bank":"Meezan","note":"Txn Alert: Rs 990 spent at KFC","merchant":"KFC","amount":990.0,"type":"debit","method":"Wallet","category":"Food","city":"Karachi"},{"id":55,"date":"2026-06-12 13:00","bank":"HBL","note":"Txn Alert: Rs 348 spent at WB by Hemani","merchant":"WB by Hemani","amount":348.0,"type":"debit","method":"Card","category":"Beauty","city":"Karachi"},{"id":56,"date":"2026-06-13 01:00","bank":"Easypaisa","note":"Txn Alert: Rs 176 spent at School Cafeteria","merchant":"School Cafeteria","amount":176.0,"type":"debit","method":"Wallet","category":"Food","city":"Karachi"},{"id":57,"date":"2026-06-13 01:00","bank":"Easypaisa","note":"Txn Alert: Rs 506 spent at Chai Spot","merchant":"Chai Spot","amount":506.0,"type":"debit","method":"IBFT","category":"Coffee","city":"Karachi"},{"id":58,"date":"2026-06-13 04:00","bank":"HBL","note":"Txn Alert: Rs 1062 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1062.0,"type":"debit","method":"App","category":"Entertainment","city":"Karachi"},{"id":59,"date":"2026-06-13 08:00","bank":"HBL","note":"Txn Alert: Rs 615 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":615.0,"type":"debit","method":"ATM","category":"Coffee","city":"Karachi"},{"id":60,"date":"2026-06-14 01:00","bank":"Meezan","note":"Txn Alert: Rs 1115 spent at Bagallery","merchant":"Bagallery","amount":1115.0,"type":"debit","method":"Card","category":"Beauty","city":"Karachi"},{"id":61,"date":"2026-06-14 02:00","bank":"NayaPay","note":"Txn Alert: Rs 1349 spent at Bagallery","merchant":"Bagallery","amount":1349.0,"type":"debit","method":"ATM","category":"Beauty","city":"Karachi"},{"id":62,"date":"2026-06-14 05:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1508 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1508.0,"type":"debit","method":"ATM","category":"Entertainment","city":"Karachi"},{"id":63,"date":"2026-06-14 07:00","bank":"UBL","note":"Txn Alert: Rs 442 spent at Yango","merchant":"Yango","amount":442.0,"type":"debit","method":"ATM","category":"Transport","city":"Karachi"},{"id":64,"date":"2026-06-14 13:00","bank":"HBL","note":"Txn Alert: Rs 1582 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1582.0,"type":"debit","method":"ATM","category":"Entertainment","city":"Karachi"},{"id":65,"date":"2026-06-14 15:00","bank":"UBL","note":"Txn Alert: Rs 403 spent at inDrive","merchant":"inDrive","amount":403.0,"type":"debit","method":"IBFT","category":"Transport","city":"Karachi"},{"id":66,"date":"2026-06-14 17:00","bank":"JazzCash","note":"Txn Alert: Rs 398 spent at Easyload","merchant":"Easyload","amount":398.0,"type":"debit","method":"QR","category":"Utilities","city":"Karachi"},{"id":67,"date":"2026-06-14 21:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 429 spent at Chai Spot","merchant":"Chai Spot","amount":429.0,"type":"debit","method":"QR","category":"Coffee","city":"Karachi"},{"id":68,"date":"2026-06-14 22:00","bank":"UBL","note":"Txn Alert: Rs 456 spent at inDrive","merchant":"inDrive","amount":456.0,"type":"debit","method":"QR","category":"Transport","city":"Karachi"},{"id":69,"date":"2026-06-15 00:00","bank":"Easypaisa","note":"Txn Alert: Rs 210 spent at School Cafeteria","merchant":"School Cafeteria","amount":210.0,"type":"debit","method":"App","category":"Food","city":"Karachi"},{"id":70,"date":"2026-06-15 04:00","bank":"NayaPay","note":"Txn Alert: Rs 242 spent at Easyload","merchant":"Easyload","amount":242.0,"type":"debit","method":"IBFT","category":"Utilities","city":"Karachi"},{"id":71,"date":"2026-06-15 05:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 849 spent at KFC","merchant":"KFC","amount":849.0,"type":"debit","method":"QR","category":"Food","city":"Karachi"},{"id":72,"date":"2026-06-15 11:00","bank":"Meezan","note":"Txn Alert: Rs 463 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":463.0,"type":"debit","method":"QR","category":"Coffee","city":"Karachi"},{"id":73,"date":"2026-06-15 12:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1350 spent at MINISO Lucky One","merchant":"MINISO Lucky One","amount":1350.0,"type":"debit","method":"Card","category":"Lifestyle","city":"Karachi"},{"id":74,"date":"2026-06-15 21:00","bank":"JazzCash","note":"Txn Alert: Rs 858 spent at KFC","merchant":"KFC","amount":858.0,"type":"debit","method":"ATM","category":"Food","city":"Karachi"},{"id":75,"date":"2026-06-16 03:00","bank":"NayaPay","note":"Txn Alert: Rs 619 spent at Yango","merchant":"Yango","amount":619.0,"type":"debit","method":"QR","category":"Transport","city":"Karachi"},{"id":76,"date":"2026-06-16 04:00","bank":"JazzCash","note":"Txn Alert: Rs 319 spent at Easyload","merchant":"Easyload","amount":319.0,"type":"debit","method":"IBFT","category":"Utilities","city":"Karachi"},{"id":77,"date":"2026-06-16 06:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1036 spent at MINISO PK","merchant":"MINISO PK","amount":1036.0,"type":"debit","method":"ATM","category":"Lifestyle","city":"Karachi"},{"id":78,"date":"2026-06-16 15:00","bank":"Meezan","note":"Txn Alert: Rs 975 spent at MINISO Lucky One","merchant":"MINISO Lucky One","amount":975.0,"type":"debit","method":"App","category":"Lifestyle","city":"Karachi"},{"id":79,"date":"2026-06-17 03:00","bank":"HBL","note":"Txn Alert: Rs 1037 spent at OPTP","merchant":"OPTP","amount":1037.0,"type":"debit","method":"ATM","category":"Food","city":"Karachi"},{"id":80,"date":"2026-06-17 06:00","bank":"UBL","note":"Txn Alert: Rs 1706 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1706.0,"type":"debit","method":"Wallet","category":"Entertainment","city":"Karachi"},{"id":81,"date":"2026-06-17 09:00","bank":"HBL","note":"Txn Alert: Rs 1201 spent at WB by Hemani","merchant":"WB by Hemani","amount":1201.0,"type":"debit","method":"IBFT","category":"Beauty","city":"Karachi"},{"id":82,"date":"2026-06-17 12:00","bank":"UBL","note":"Txn Alert: Rs 1348 spent at WB by Hemani","merchant":"WB by Hemani","amount":1348.0,"type":"debit","method":"IBFT","category":"Beauty","city":"Karachi"},{"id":83,"date":"2026-06-18 01:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1591 spent at Liberty Books","merchant":"Liberty Books","amount":1591.0,"type":"debit","method":"QR","category":"Education","city":"Karachi"},{"id":84,"date":"2026-06-18 01:00","bank":"Meezan","note":"Txn Alert: Rs 656 spent at WB by Hemani","merchant":"WB by Hemani","amount":656.0,"type":"debit","method":"Wallet","category":"Beauty","city":"Karachi"},{"id":85,"date":"2026-06-18 02:00","bank":"Easypaisa","note":"Txn Alert: Rs 418 spent at School Cafeteria","merchant":"School Cafeteria","amount":418.0,"type":"debit","method":"IBFT","category":"Food","city":"Karachi"},{"id":86,"date":"2026-06-18 04:00","bank":"Meezan","note":"Txn Alert: Rs 1494 spent at Liberty Books","merchant":"Liberty Books","amount":1494.0,"type":"debit","method":"App","category":"Education","city":"Karachi"},{"id":87,"date":"2026-06-18 09:00","bank":"NayaPay","note":"Rs 500 received from Ayesha (Lunch Share)","merchant":"Ayesha","amount":500.0,"type":"credit","method":"P2P","category":"Transfer","city":"Karachi"},{"id":88,"date":"2026-06-18 12:00","bank":"UBL","note":"Txn Alert: Rs 1152 spent at KFC","merchant":"KFC","amount":1152.0,"type":"debit","method":"App","category":"Food","city":"Karachi"},{"id":89,"date":"2026-06-18 14:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 989 spent at WB by Hemani","merchant":"WB by Hemani","amount":989.0,"type":"debit","method":"QR","category":"Beauty","city":"Karachi"},{"id":90,"date":"2026-06-18 15:00","bank":"JazzCash","note":"Txn Alert: Rs 1111 spent at OPTP","merchant":"OPTP","amount":1111.0,"type":"debit","method":"Wallet","category":"Food","city":"Karachi"},{"id":91,"date":"2026-06-18 19:00","bank":"NayaPay","note":"Txn Alert: Rs 405 spent at School Cafeteria","merchant":"School Cafeteria","amount":405.0,"type":"debit","method":"Card","category":"Food","city":"Karachi"},{"id":92,"date":"2026-06-19 06:00","bank":"Easypaisa","note":"Txn Alert: Rs 1262 spent at Bagallery","merchant":"Bagallery","amount":1262.0,"type":"debit","method":"QR","category":"Beauty","city":"Karachi"},{"id":93,"date":"2026-06-19 10:00","bank":"HBL","note":"Txn Alert: Rs 348 spent at Chai Spot","merchant":"Chai Spot","amount":348.0,"type":"debit","method":"Card","category":"Coffee","city":"Karachi"},{"id":94,"date":"2026-06-19 10:00","bank":"Easypaisa","note":"Txn Alert: Rs 791 spent at Liberty Books","merchant":"Liberty Books","amount":791.0,"type":"debit","method":"Card","category":"Education","city":"Karachi"},{"id":95,"date":"2026-06-20 03:00","bank":"JazzCash","note":"Txn Alert: Rs 1469 spent at OPTP","merchant":"OPTP","amount":1469.0,"type":"debit","method":"Card","category":"Food","city":"Karachi"},{"id":96,"date":"2026-06-20 04:00","bank":"NayaPay","note":"Txn Alert: Rs 239 spent at School Cafeteria","merchant":"School Cafeteria","amount":239.0,"type":"debit","method":"Wallet","category":"Food","city":"Karachi"},{"id":97,"date":"2026-06-20 07:00","bank":"NayaPay","note":"Txn Alert: Rs 470 spent at Easyload","merchant":"Easyload","amount":470.0,"type":"debit","method":"Card","category":"Utilities","city":"Karachi"},{"id":98,"date":"2026-06-20 12:00","bank":"Easypaisa","note":"Txn Alert: Rs 1343 spent at KFC","merchant":"KFC","amount":1343.0,"type":"debit","method":"QR","category":"Food","city":"Karachi"},{"id":99,"date":"2026-06-21 02:00","bank":"Meezan","note":"Txn Alert: Rs 476 spent at School Cafeteria","merchant":"School Cafeteria","amount":476.0,"type":"debit","method":"QR","category":"Food","city":"Karachi"},{"id":100,"date":"2026-06-21 03:00","bank":"NayaPay","note":"Rs 500 received from Ayesha (Lunch Share)","merchant":"Ayesha","amount":500.0,"type":"credit","method":"P2P","category":"Transfer","city":"Karachi"},{"id":101,"date":"2026-06-21 20:00","bank":"NayaPay","note":"Txn Alert: Rs 784 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":784.0,"type":"debit","method":"Wallet","category":"Coffee","city":"Karachi"},{"id":102,"date":"2026-06-21 23:00","bank":"HBL","note":"Txn Alert: Rs 513 spent at Yango","merchant":"Yango","amount":513.0,"type":"debit","method":"App","category":"Transport","city":"Karachi"},{"id":103,"date":"2026-06-22 00:00","bank":"UBL","note":"Txn Alert: Rs 265 spent at Easyload","merchant":"Easyload","amount":265.0,"type":"debit","method":"ATM","category":"Utilities","city":"Karachi"},{"id":104,"date":"2026-06-22 10:00","bank":"UBL","note":"Txn Alert: Rs 1429 spent at OPTP","merchant":"OPTP","amount":1429.0,"type":"debit","method":"IBFT","category":"Food","city":"Karachi"},{"id":105,"date":"2026-06-22 19:00","bank":"Meezan","note":"Txn Alert: Rs 599 spent at School Cafeteria","merchant":"School Cafeteria","amount":599.0,"type":"debit","method":"ATM","category":"Food","city":"Karachi"},{"id":106,"date":"2026-06-23 03:00","bank":"Meezan","note":"Txn Alert: Rs 1084 spent at MINISO PK","merchant":"MINISO PK","amount":1084.0,"type":"debit","method":"QR","category":"Lifestyle","city":"Karachi"},{"id":107,"date":"2026-06-23 08:00","bank":"NayaPay","note":"Txn Alert: Rs 476 spent at Chai Spot","merchant":"Chai Spot","amount":476.0,"type":"debit","method":"QR","category":"Coffee","city":"Karachi"},{"id":108,"date":"2026-06-23 13:00","bank":"NayaPay","note":"Txn Alert: Rs 389 spent at inDrive","merchant":"inDrive","amount":389.0,"type":"debit","method":"QR","category":"Transport","city":"Karachi"},{"id":109,"date":"2026-06-23 18:00","bank":"Easypaisa","note":"Txn Alert: Rs 356 spent at Chai Spot","merchant":"Chai Spot","amount":356.0,"type":"debit","method":"Card","category":"Coffee","city":"Karachi"},{"id":110,"date":"2026-06-23 21:00","bank":"HBL","note":"Txn Alert: Rs 855 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":855.0,"type":"debit","method":"QR","category":"Coffee","city":"Karachi"},{"id":111,"date":"2026-06-24 09:00","bank":"NayaPay","note":"Txn Alert: Rs 535 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":535.0,"type":"debit","method":"App","category":"Coffee","city":"Karachi"},{"id":112,"date":"2026-06-24 10:00","bank":"HBL","note":"Txn Alert: Rs 421 spent at Easyload","merchant":"Easyload","amount":421.0,"type":"debit","method":"ATM","category":"Utilities","city":"Karachi"},{"id":113,"date":"2026-06-24 13:00","bank":"UBL","note":"Txn Alert: Rs 768 spent at OPTP","merchant":"OPTP","amount":768.0,"type":"debit","method":"App","category":"Food","city":"Karachi"},{"id":114,"date":"2026-06-24 14:00","bank":"NayaPay","note":"Txn Alert: Rs 996 spent at OPTP","merchant":"OPTP","amount":996.0,"type":"debit","method":"Card","category":"Food","city":"Karachi"},{"id":115,"date":"2026-06-24 15:00","bank":"JazzCash","note":"Txn Alert: Rs 480 spent at Chai Spot","merchant":"Chai Spot","amount":480.0,"type":"debit","method":"Card","category":"Coffee","city":"Karachi"},{"id":116,"date":"2026-06-24 18:00","bank":"NayaPay","note":"Txn Alert: Rs 1096 spent at KFC","merchant":"KFC","amount":1096.0,"type":"debit","method":"ATM","category":"Food","city":"Karachi"},{"id":117,"date":"2026-06-25 00:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1611 spent at KFC","merchant":"KFC","amount":1611.0,"type":"debit","method":"Wallet","category":"Food","city":"Karachi"},{"id":118,"date":"2026-06-25 00:00","bank":"Meezan","note":"Txn Alert: Rs 874 spent at OPTP","merchant":"OPTP","amount":874.0,"type":"debit","method":"Wallet","category":"Food","city":"Karachi"},{"id":119,"date":"2026-06-25 03:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1340 spent at WB by Hemani","merchant":"WB by Hemani","amount":1340.0,"type":"debit","method":"IBFT","category":"Beauty","city":"Karachi"},{"id":120,"date":"2026-06-25 05:00","bank":"UBL","note":"Txn Alert: Rs 636 spent at WB by Hemani","merchant":"WB by Hemani","amount":636.0,"type":"debit","method":"App","category":"Beauty","city":"Karachi"},{"id":121,"date":"2026-06-25 11:00","bank":"Easypaisa","note":"Txn Alert: Rs 1969 spent at MINISO Lucky One","merchant":"MINISO Lucky One","amount":1969.0,"type":"debit","method":"ATM","category":"Lifestyle","city":"Karachi"},{"id":122,"date":"2026-06-25 11:00","bank":"JazzCash","note":"Txn Alert: Rs 588 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":588.0,"type":"debit","method":"Card","category":"Coffee","city":"Karachi"},{"id":123,"date":"2026-06-25 12:00","bank":"NayaPay","note":"Rs 500 received from Ayesha (Lunch Share)","merchant":"Ayesha","amount":500.0,"type":"credit","method":"P2P","category":"Transfer","city":"Karachi"},{"id":124,"date":"2026-06-25 13:00","bank":"NayaPay","note":"Txn Alert: Rs 1103 spent at OPTP","merchant":"OPTP","amount":1103.0,"type":"debit","method":"App","category":"Food","city":"Karachi"},{"id":125,"date":"2026-06-25 20:00","bank":"Easypaisa","note":"Txn Alert: Rs 874 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":874.0,"type":"debit","method":"QR","category":"Coffee","city":"Karachi"},{"id":126,"date":"2026-06-26 01:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1057 spent at Bagallery","merchant":"Bagallery","amount":1057.0,"type":"debit","method":"QR","category":"Beauty","city":"Karachi"},{"id":127,"date":"2026-06-26 03:00","bank":"Easypaisa","note":"Txn Alert: Rs 649 spent at Liberty Books","merchant":"Liberty Books","amount":649.0,"type":"debit","method":"IBFT","category":"Education","city":"Karachi"},{"id":128,"date":"2026-06-26 06:00","bank":"NayaPay","note":"Txn Alert: Rs 650 spent at WB by Hemani","merchant":"WB by Hemani","amount":650.0,"type":"debit","method":"QR","category":"Beauty","city":"Karachi"},{"id":129,"date":"2026-06-26 07:00","bank":"Easypaisa","note":"Txn Alert: Rs 545 spent at inDrive","merchant":"inDrive","amount":545.0,"type":"debit","method":"Wallet","category":"Transport","city":"Karachi"},{"id":130,"date":"2026-06-26 11:00","bank":"Meezan","note":"Txn Alert: Rs 894 spent at WB by Hemani","merchant":"WB by Hemani","amount":894.0,"type":"debit","method":"Wallet","category":"Beauty","city":"Karachi"},{"id":132,"date":"2026-06-26 15:00","bank":"UBL","note":"Txn Alert: Rs 1321 spent at WB by Hemani","merchant":"WB by Hemani","amount":1321.0,"type":"debit","method":"IBFT","category":"Beauty","city":"Karachi"},{"id":133,"date":"2026-06-26 21:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1188 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1188.0,"type":"debit","method":"Wallet","category":"Entertainment","city":"Karachi"},{"id":134,"date":"2026-06-26 22:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 319 spent at Easyload","merchant":"Easyload","amount":319.0,"type":"debit","method":"ATM","category":"Utilities","city":"Karachi"},{"id":135,"date":"2026-06-27 01:00","bank":"Easypaisa","note":"Txn Alert: Rs 638 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":638.0,"type":"debit","method":"IBFT","category":"Coffee","city":"Karachi"},{"id":136,"date":"2026-06-27 10:00","bank":"JazzCash","note":"Txn Alert: Rs 597 spent at inDrive","merchant":"inDrive","amount":597.0,"type":"debit","method":"Wallet","category":"Transport","city":"Karachi"},{"id":137,"date":"2026-06-27 12:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 1265 spent at OPTP","merchant":"OPTP","amount":1265.0,"type":"debit","method":"Card","category":"Food","city":"Karachi"},{"id":138,"date":"2026-06-27 19:00","bank":"UBL","note":"Txn Alert: Rs 227 spent at Easyload","merchant":"Easyload","amount":227.0,"type":"debit","method":"Wallet","category":"Utilities","city":"Karachi"},{"id":139,"date":"2026-06-27 21:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 822 spent at KFC","merchant":"KFC","amount":822.0,"type":"debit","method":"Card","category":"Food","city":"Karachi"},{"id":140,"date":"2026-06-28 00:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 811 spent at OPTP","merchant":"OPTP","amount":811.0,"type":"debit","method":"QR","category":"Food","city":"Karachi"},{"id":141,"date":"2026-06-28 07:00","bank":"NayaPay","note":"Txn Alert: Rs 1797 spent at Liberty Books","merchant":"Liberty Books","amount":1797.0,"type":"debit","method":"App","category":"Education","city":"Karachi"},{"id":142,"date":"2026-06-28 08:00","bank":"NayaPay","note":"Txn Alert: Rs 400 spent at WB by Hemani","merchant":"WB by Hemani","amount":400.0,"type":"debit","method":"IBFT","category":"Beauty","city":"Karachi"},{"id":143,"date":"2026-06-28 15:00","bank":"Easypaisa","note":"Txn Alert: Rs 594 spent at MINISO PK","merchant":"MINISO PK","amount":594.0,"type":"debit","method":"Wallet","category":"Lifestyle","city":"Karachi"},{"id":144,"date":"2026-06-28 18:00","bank":"Bank Alfalah","note":"Txn Alert: Rs 635 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":635.0,"type":"debit","method":"Wallet","category":"Coffee","city":"Karachi"},{"id":145,"date":"2026-06-28 20:00","bank":"Easypaisa","note":"Txn Alert: Rs 245 spent at Easyload","merchant":"Easyload","amount":245.0,"type":"debit","method":"App","category":"Utilities","city":"Karachi"},{"id":146,"date":"2026-06-28 20:00","bank":"NayaPay","note":"Txn Alert: Rs 1497 spent at MINISO Lucky One","merchant":"MINISO Lucky One","amount":1497.0,"type":"debit","method":"IBFT","category":"Lifestyle","city":"Karachi"},{"id":147,"date":"2026-06-29 01:00","bank":"UBL","note":"Txn Alert: Rs 2115 spent at MINISO Lucky One","merchant":"MINISO Lucky One","amount":2115.0,"type":"debit","method":"ATM","category":"Lifestyle","city":"Karachi"},{"id":148,"date":"2026-06-29 02:00","bank":"Easypaisa","note":"Txn Alert: Rs 890 spent at Coffee Wagera","merchant":"Coffee Wagera","amount":890.0,"type":"debit","method":"Card","category":"Coffee","city":"Karachi"},{"id":149,"date":"2026-06-29 08:00","bank":"UBL","note":"Txn Alert: Rs 257 spent at Easyload","merchant":"Easyload","amount":257.0,"type":"debit","method":"QR","category":"Utilities","city":"Karachi"},{"id":150,"date":"2026-06-29 12:00","bank":"NayaPay","note":"Txn Alert: Rs 1075 spent at MINISO PK","merchant":"MINISO PK","amount":1075.0,"type":"debit","method":"QR","category":"Lifestyle","city":"Karachi"},{"id":151,"date":"2026-06-29 12:00","bank":"JazzCash","note":"Txn Alert: Rs 386 spent at Chai Spot","merchant":"Chai Spot","amount":386.0,"type":"debit","method":"ATM","category":"Coffee","city":"Karachi"},{"id":152,"date":"2026-06-29 15:00","bank":"Meezan","note":"Txn Alert: Rs 300 spent at Chai Spot","merchant":"Chai Spot","amount":300.0,"type":"debit","method":"App","category":"Coffee","city":"Karachi"},{"id":153,"date":"2026-06-29 19:00","bank":"JazzCash","note":"Txn Alert: Rs 1755 spent at Bagallery","merchant":"Bagallery","amount":1755.0,"type":"debit","method":"App","category":"Beauty","city":"Karachi"},{"id":154,"date":"2026-06-29 22:00","bank":"JazzCash","note":"Txn Alert: Rs 559 spent at School Cafeteria","merchant":"School Cafeteria","amount":559.0,"type":"debit","method":"IBFT","category":"Food","city":"Karachi"},{"id":155,"date":"2026-06-29 22:00","bank":"NayaPay","note":"Txn Alert: Rs 1097 spent at WB by Hemani","merchant":"WB by Hemani","amount":1097.0,"type":"debit","method":"ATM","category":"Beauty","city":"Karachi"},{"id":156,"date":"2026-06-30 06:00","bank":"UBL","note":"Txn Alert: Rs 1584 spent at Atrium Cinema","merchant":"Atrium Cinema","amount":1584.0,"type":"debit","method":"Card","category":"Entertainment","city":"Karachi"},{"id":157,"date":"2026-06-30 07:00","bank":"Easypaisa","note":"Txn Alert: Rs 1301 spent at KFC","merchant":"KFC","amount":1301.0,"type":"debit","method":"QR","category":"Food","city":"Karachi"},{"id":158,"date":"2026-06-30 08:00","bank":"UBL","note":"Txn Alert: Rs 1055 spent at OPTP","merchant":"OPTP","amount":1055.0,"type":"debit","method":"ATM","category":"Food","city":"Karachi"},{"id":159,"date":"2026-06-30 09:00","bank":"Meezan","note":"Txn Alert: Rs 278 spent at inDrive","merchant":"inDrive","amount":278.0,"type":"debit","method":"QR","category":"Transport","city":"Karachi"}];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let allTx = [...HANIYA_DATA];
+let txFilter = 'all';
+let showAll = false;
+let isDark = true;
+let isParentView = false;
+let trendChartObj = null, pieChartObj = null, merchantChartObj = null;
+let activeTab = 'trend';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const CAT_ICONS = {Food:'🍔',Beauty:'💄',Lifestyle:'🛍️',Entertainment:'🎬',Coffee:'☕',
+  Transport:'🚗',Education:'📚',Utilities:'💡',Allowance:'💰',Transfer:'💸',System:'⚙️',Other:'📦'};
+const CAT_LABELS = {Food:'Food & Drinks',Beauty:'Beauty & Makeup',Lifestyle:'Lifestyle',
+  Entertainment:'Entertainment',Coffee:'Coffee',Transport:'Transport',Education:'Education',
+  Utilities:'Utilities',Allowance:'Allowance / Income',Transfer:'Transfers',System:'System',Other:'Other'};
+const CAT_COLORS = {Food:'#f97316',Beauty:'#ec4899',Lifestyle:'#a855f7',Entertainment:'#22d3ee',
+  Coffee:'#d97706',Transport:'#3b82f6',Education:'#14b8a6',Utilities:'#f59e0b',
+  Allowance:'#10b981',Transfer:'#6366f1',System:'#64748b',Other:'#64748b'};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function pkr(n){return 'PKR '+Math.round(Math.abs(n)).toLocaleString();}
+function pkrS(n){const a=Math.abs(n);if(a>=100000)return '₨'+(a/100000).toFixed(1)+'L';if(a>=1000)return '₨'+(a/1000).toFixed(1)+'K';return '₨'+Math.round(a);}
+function el(id){return document.getElementById(id);}
+function catColor(c){return CAT_COLORS[c]||'#64748b';}
+function catIcon(c){return CAT_ICONS[c]||'📦';}
+function catLabel(c){return CAT_LABELS[c]||c;}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function toggleTheme(){
+  isDark=!isDark;
+  document.body.className=isDark?'dark':'light';
+  el('themeToggle').textContent=isDark?'🌙 Dark':'☀️ Light';
+  el('themeToggle').classList.toggle('on',!isDark);
+  redrawCharts();
+}
+
+// ── View toggle ───────────────────────────────────────────────────────────────
+function toggleView(){
+  isParentView=!isParentView;
+  el('viewToggle').textContent=isParentView?'🛡️ Parent View':'👤 Teen View';
+  el('viewToggle').classList.toggle('on',isParentView);
+  el('parentBanner').style.display=isParentView?'flex':'none';
+  renderAll();
+}
+
+// ── Compute dashboard ─────────────────────────────────────────────────────────
+function compute(txns){
+  const debits  = txns.filter(t=>t.type==='debit');
+  const credits = txns.filter(t=>t.type==='credit');
+  const totalSpent  = debits.reduce((s,t)=>s+t.amount,0);
+  const totalIncome = credits.reduce((s,t)=>s+t.amount,0);
+  const balance = totalIncome - totalSpent;
+  const savingsRate = totalIncome>0 ? Math.max(0,balance/totalIncome) : 0;
+
+  // Category map
+  const catMap={};
+  for(const t of debits){
+    const c=t.category||'Other';
+    if(!catMap[c])catMap[c]={amount:0,count:0};
+    catMap[c].amount+=t.amount; catMap[c].count+=1;
+  }
+  const topCats=Object.entries(catMap).map(([c,d])=>({cat:c,...d})).sort((a,b)=>b.amount-a.amount);
+
+  // Daily trend
+  const dayMap={};
+  for(const t of debits){const d=t.date.slice(0,10);dayMap[d]=(dayMap[d]||0)+t.amount;}
+  const days=Object.entries(dayMap).sort(([a],[b])=>a<b?-1:1)
+    .map(([d,s])=>({day:new Date(d).toLocaleDateString('en-PK',{day:'numeric',month:'short'}),spent:s}));
+
+  // Top merchants
+  const mMap={};
+  for(const t of debits){const m=t.merchant||'?';if(!mMap[m])mMap[m]={amount:0,count:0};mMap[m].amount+=t.amount;mMap[m].count+=1;}
+  const topM=Object.entries(mMap).map(([m,d])=>({m,...d})).sort((a,b)=>b.amount-a.amount).slice(0,8);
+
+  // Weekday vs weekend
+  let wd=0,we=0;
+  for(const t of debits){const d=new Date(t.date).getDay();if(d===0||d===6)we+=t.amount;else wd+=t.amount;}
+
+  // Late night (11pm-4am)
+  const lateNight=debits.filter(t=>{const h=new Date(t.date).getHours();return h>=23||h<=4;});
+  const lateTotal=lateNight.reduce((s,t)=>s+t.amount,0);
+
+  // Health score
+  let score=50;
+  score+=Math.min(20,savingsRate*50);
+  if(totalSpent>totalIncome*2)score-=20;
+  else if(totalSpent>totalIncome)score-=10;
+  if((catMap.Coffee?.amount||0)/totalSpent>0.1)score-=5;
+  if((catMap.Beauty?.amount||0)/totalSpent>0.2)score-=5;
+  if(lateTotal/totalSpent>0.25)score-=5;
+  if(catMap.Education)score+=5;
+  score=Math.max(10,Math.min(100,Math.round(score)));
+
+  return {debits,credits,totalSpent,totalIncome,balance,savingsRate,catMap,topCats,days,topM,wd,we,lateNight,lateTotal,score};
+}
+
+// ── Insights ──────────────────────────────────────────────────────────────────
+function buildInsights(d){
+  const ins=[];
+  const {catMap,totalSpent,totalIncome,savingsRate,we,wd,lateNight,lateTotal,topM,score}=d;
+
+  if(totalSpent>totalIncome){
+    const r=totalIncome>0?(totalSpent/totalIncome).toFixed(1):'∞';
+    ins.push({e:'🚨',sev:'high',title:'Spending is way more than income!',
+      desc:`Received ${pkr(totalIncome)} but spent ${pkr(totalSpent)} — that's ${r}x your income. This likely comes from parents' money. You need to cut back urgently.`});
+  }
+  if((catMap.Coffee?.amount||0)/totalSpent>0.08){
+    const c=catMap.Coffee;
+    ins.push({e:'☕',sev:'medium',title:`Coffee habit costs ${pkr(c.amount)}!`,
+      desc:`${c.count} coffee visits this month. Cutting just 3 visits per week saves you PKR 3,000+ monthly.`});
+  }
+  if((catMap.Beauty?.amount||0)/totalSpent>0.15){
+    const b=catMap.Beauty;
+    ins.push({e:'💄',sev:'medium',title:`Beauty spending is ${((b.amount/totalSpent)*100).toFixed(0)}% of total`,
+      desc:`${pkr(b.amount)} on beauty & makeup. Set a monthly beauty budget to avoid going over.`});
+  }
+  if(d.topCats.length>0){
+    const t=d.topCats[0];
+    ins.push({e:'💸',sev:'low',title:`Most money → ${catLabel(t.cat)}`,
+      desc:`${pkr(t.amount)} (${((t.amount/totalSpent)*100).toFixed(0)}%) in ${t.count} transactions.`});
+  }
+  if(lateTotal/totalSpent>0.2){
+    ins.push({e:'🌙',sev:'medium',title:`${((lateTotal/totalSpent)*100).toFixed(0)}% spending after 11pm!`,
+      desc:`${pkr(lateTotal)} spent late night (${lateNight.length} txns). Late night = impulse buying. Sleep on it before buying!`});
+  }
+  if(we>wd*1.3){
+    ins.push({e:'🎉',sev:'low',title:'Weekend spending is higher',
+      desc:`Weekends: ${pkr(we)} vs Weekdays: ${pkr(wd)}. Try a weekly fun budget to stay in control.`});
+  }
+  const topPlace=topM[0];
+  if(topPlace&&topPlace.count>=5){
+    ins.push({e:'🔄',title:`${topPlace.m} is your #1 spot`,
+      desc:`${topPlace.count} visits, ${pkr(topPlace.amount)} total. Habit or choice?`});
+  }
+  if(catMap.Education){
+    ins.push({e:'📚',type:'achievement',title:'You invest in education — great!',
+      desc:`${pkr(catMap.Education.amount)} on books & learning. Keep it up!`});
+  }
+  if(savingsRate<0.1){
+    ins.push({e:'💡',type:'tip',title:'How to save as a teenager',
+      desc:'Try 70/20/10: 70% needs, 20% wants, 10% saved. Even PKR 1,000/month = PKR 12,000/year!'});
+  }
+  return ins;
+}
+
+// ── Auto-parse SMS/email note ─────────────────────────────────────────────────
+function autoParseNote(text){
+  if(!text||text.length<10)return;
+  // Extract amount
+  const amtMatch=text.match(/(?:PKR|Rs\.?|₨)\s*([\d,]+(?:\.\d{1,2})?)/i);
+  if(amtMatch){el('mAmount').value=amtMatch[1].replace(/,/g,'');}
+  // Extract merchant
+  const mMatch=text.match(/(?:at|@)\s+([A-Za-z][A-Za-z0-9\s&\'-]{2,30}?)(?:\s+on|\.)/i);
+  if(mMatch){el('mMerchant').value=mMatch[1].trim();}
+  // Type
+  if(/debit|paid|purchase|spent|withdraw/i.test(text))el('mType').value='debit';
+  else if(/credit|received|credited/i.test(text))el('mType').value='credit';
+  // Category guess
+  const catRules=[
+    [/coffee|wagera|chai|cappuccino/i,'Coffee'],[/kfc|optp|mcdonald|pizza|food|biryani|cafeteria/i,'Food'],
+    [/miniso|lifestyle|bagallery/i,'Lifestyle'],[/hemani|beauty|makeup|salon/i,'Beauty'],
+    [/cinema|atrium|netflix|entertainment/i,'Entertainment'],[/uber|careem|indrive|yango|transport/i,'Transport'],
+    [/liberty|school|university|books|education/i,'Education'],[/easyload|electricity|utility|bill/i,'Utilities'],
+    [/transfer|ibft|send|received/i,'Transfer'],[/pocket money|allowance|parents/i,'Allowance'],
+  ];
+  for(const [pat,cat] of catRules){if(pat.test(text)){el('mCat').value=cat;break;}}
+}
+
+// ── Add manual transaction ────────────────────────────────────────────────────
+function addManual(){
+  const merchant=(el('mMerchant').value||'').trim();
+  const amount=parseFloat(el('mAmount').value);
+  const type=el('mType').value;
+  const category=el('mCat').value;
+  const bank=(el('mBank').value||'').trim();
+  const note=(el('mNote').value||'').trim();
+  let dateVal=el('mDate').value;
+  if(!dateVal)dateVal=new Date().toISOString().slice(0,16);
+
+  if(!merchant){el('manualResult').innerHTML='<span style="color:#f87171">Please enter a merchant name.</span>';return;}
+  if(!amount||isNaN(amount)||amount<=0){el('manualResult').innerHTML='<span style="color:#f87171">Please enter a valid amount.</span>';return;}
+
+  const tx={
+    id:'m_'+Date.now(),date:dateVal.replace('T',' '),bank,note:note||`${type==='debit'?'Spent':'Received'} at ${merchant}`,
+    merchant,amount,type,method:'Manual',category,city:'Karachi'
+  };
+  allTx.push(tx);
+  // Sort
+  allTx.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  el('manualResult').innerHTML='<span style="color:#4ade80">✓ Transaction added!</span>';
+  // Clear form
+  el('mMerchant').value='';el('mAmount').value='';el('mNote').value='';el('mBank').value='';
+  setTimeout(()=>{el('manualResult').innerHTML='';},2000);
+  renderAll();
+}
+
+// ── File upload handler ───────────────────────────────────────────────────────
+function handleDrop(e){e.preventDefault();el('uploadZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleFile(f);}
+function handleFile(file){
+  if(!file)return;
+  const isExcel=/\.(xlsx|xls|csv)$/i.test(file.name);
+  const isEml=/\.(eml|txt)$/i.test(file.name);
+  if(!isExcel&&!isEml){showUploadResult(false,'Unsupported file type. Use .xlsx, .csv, or .eml');return;}
+  if(isExcel){parseExcel(file);}
+  else{parseEml(file);}
+}
+
+function parseExcel(file){
+  el('uploadContent').innerHTML='<div style="font-size:1.5rem;margin-bottom:.4rem">⏳</div><div class="muted">Reading Excel file…</div>';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      let parsed=[];
+      for(const sn of wb.SheetNames){
+        if(/readme|customer|raw/i.test(sn))continue;
+        const ws=wb.Sheets[sn];
+        const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+        if(!rows.length)continue;
+        const sample=rows[0];
+        // Build column mapping
+        const CM={};
+        for(const k of Object.keys(sample)){
+          const n=k.toLowerCase().replace(/[^a-z0-9]/g,'');
+          const MAP={merchantname:'merchant',description:'merchant',narration:'merchant',particulars:'merchant',payee:'merchant',
+            amountpkr:'amount',amount:'amount',value:'amount',debit:'debit',withdrawal:'debit',dr:'debit',
+            credit:'credit',deposit:'credit',cr:'credit',date:'date',datetime:'date',transactiondate:'date',
+            dateime:'date',direction:'direction',type:'type',transactiontype:'type',
+            category:'category',source:'bank',bank:'bank',paymentmethod:'method',payment_method:'method'};
+          CM[k]=MAP[n]||n;
+        }
+        for(const row of rows){
+          const r={};
+          for(const [k,v] of Object.entries(row))r[CM[k]]=v;
+          const merchant=String(r.merchant||r.merchantname||r.description||r.narration||'').trim();
+          if(!merchant||merchant==='merchant_name')continue;
+          let amount=0,type='credit';
+          // Handle direction column (Haniya dataset style)
+          if(r.direction==='debit'||r.direction==='credit'){
+            amount=Math.abs(parseFloat(String(r.amount||'').replace(/,/g,'')))||0;
+            type=r.direction;
+          } else if(r.direction==='info')continue;
+          else {
+            const dv=parseFloat(String(r.debit||'').replace(/,/g,''));
+            const cv=parseFloat(String(r.credit||'').replace(/,/g,''));
+            if(!isNaN(dv)&&dv>0){amount=dv;type='debit';}
+            else if(!isNaN(cv)&&cv>0){amount=cv;type='credit';}
+            else{const av=parseFloat(String(r.amount||'').replace(/,/g,''));
+              if(!isNaN(av)&&av!==0){amount=Math.abs(av);type=(av<0||/debit|dr/i.test(String(r.type||r.direction||'')))?'debit':'credit';}}
+          }
+          if(!amount)continue;
+          let dateStr='';
+          const dv=r.date||r.datetime||r.date_time||r.transactiondate;
+          if(dv instanceof Date)dateStr=dv.toISOString().slice(0,16).replace('T',' ');
+          else if(typeof dv==='number'){const d=XLSX.SSF.parse_date_code(dv);if(d)dateStr=`${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')} ${String(d.H||0).padStart(2,'0')}:${String(d.M||0).padStart(2,'0')}`;}
+          else dateStr=String(dv||'').slice(0,16).replace('T',' ')||new Date().toISOString().slice(0,16).replace('T',' ');
+          const cat=String(r.category||'').trim()||guessCat(merchant);
+          parsed.push({id:'x_'+parsed.length,date:dateStr,bank:String(r.bank||r.source||'').trim(),
+            note:String(r.note||r.raw_notification||r.narration||merchant),merchant,amount,type,method:String(r.method||r.paymentmethod||'').trim(),category:cat,city:'Karachi'});
+        }
+      }
+      if(parsed.length===0){showUploadResult(false,'No transactions found. Check the file has Date, Merchant and Debit/Credit columns.');return;}
+      allTx=[...HANIYA_DATA,...parsed];
+      allTx.sort((a,b)=>new Date(a.date)-new Date(b.date));
+      showUploadResult(true,`✓ Added ${parsed.length} transactions from file`);
+      renderAll();
+    }catch(err){showUploadResult(false,'Could not read file: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function guessCat(text){
+  const rules=[[/coffee|wagera|chai/i,'Coffee'],[/kfc|optp|mcdonald|pizza|food|biryani|cafeteria/i,'Food'],
+    [/miniso|lifestyle|bagallery/i,'Lifestyle'],[/hemani|beauty|makeup|salon/i,'Beauty'],
+    [/cinema|atrium|netflix|entertainment/i,'Entertainment'],[/uber|careem|indrive|yango/i,'Transport'],
+    [/liberty|school|university|books/i,'Education'],[/easyload|electricity|utility/i,'Utilities'],
+    [/transfer|ibft|send/i,'Transfer'],[/pocket money|allowance|parents/i,'Allowance']];
+  for(const [p,c] of rules)if(p.test(text))return c;
+  return 'Other';
+}
+
+function parseEml(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const text=e.target.result;
+    const body=text.match(/\r?\n\r?\n([\s\S]*)/)?.[1]||text;
+    // Check if transaction
+    const signals=[/debit|credit|transaction|payment|transfer|purchase/i,/PKR|Rs\.?|₨/,/debited|credited|paid|received|sent/i];
+    if(signals.filter(s=>s.test(body)).length<2){showUploadResult(false,'Not a transaction email — no amount or transaction keywords found.');return;}
+    // Extract amount
+    const amtM=body.match(/(?:PKR|Rs\.?|₨)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    if(!amtM){showUploadResult(false,'Could not find an amount in this email.');return;}
+    const amount=parseFloat(amtM[1].replace(/,/g,''));
+    // Extract merchant
+    let merchant='Unknown';
+    const mM=body.match(/(?:at|@)\s+([A-Z][A-Za-z0-9\s&\'-]{2,30}?)(?:\s+on|\.)/i)||body.match(/(?:paid to|sent to)\s+([A-Za-z0-9\s]{2,30})(?:\s+on|\.)/i);
+    if(mM)merchant=mM[1].trim();
+    // Type
+    const type=/debit|paid|purchase|spent|withdraw|sent/i.test(body)?'debit':'credit';
+    // Bank
+    const banks=[[/HBL|Habib Bank/i,'HBL'],[/MCB/i,'MCB'],[/UBL|United Bank/i,'UBL'],[/Meezan/i,'Meezan'],[/Bank Alfalah/i,'Bank Alfalah'],[/NayaPay/i,'NayaPay'],[/Easypaisa/i,'Easypaisa'],[/JazzCash/i,'JazzCash']];
+    let bank=''; for(const [p,n] of banks)if(p.test(body)){bank=n;break;}
+    const dateM=text.match(/^Date:\s*(.+)$/mi);
+    const date=dateM?new Date(dateM[1]).toISOString().slice(0,16).replace('T',' '):new Date().toISOString().slice(0,16).replace('T',' ');
+    const cat=guessCat(merchant+' '+body);
+    const tx={id:'e_'+Date.now(),date,bank,note:body.slice(0,120),merchant,amount,type,method:'Email',category:cat,city:'Karachi'};
+    allTx.push(tx);
+    allTx.sort((a,b)=>new Date(a.date)-new Date(b.date));
+    showUploadResult(true,`✓ Parsed 1 transaction from email: ${type==='debit'?'−':'+'} ${pkr(amount)} at ${merchant}`);
+    renderAll();
+  };
+  reader.readAsText(file);
+}
+
+function showUploadResult(ok,msg){
+  const r=el('uploadResult');
+  r.style.display='block';
+  r.innerHTML=`<div class="alert-box" style="background:${ok?'#10b98115':'#ef444415'};border:1px solid ${ok?'#10b98130':'#ef444430'};color:${ok?'#4ade80':'#f87171'}">${ok?'✅':'❌'} ${msg}</div>`;
+  el('uploadContent').innerHTML='<div style="font-size:2rem;margin-bottom:.5rem">📂</div><div style="font-weight:600;font-size:.85rem;margin-bottom:.25rem">Click or drag another file</div><div class="muted">Excel (.xlsx, .csv) or Bank Email (.eml)</div>';
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(){
+  el('modalBg').style.display='flex';
+  // Set default date to now
+  const now=new Date();
+  el('mDate').value=now.toISOString().slice(0,16);
+}
+function closeModal(){el('modalBg').style.display='none';}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab){
+  activeTab=tab;
+  ['trend','pie','merchants'].forEach(t=>{
+    el('tabTrend'.replace('trend','tab'+t.charAt(0).toUpperCase()+t.slice(1))).style.display=t===tab?'block':'none';
+  });
+  el('tabTrend').style.display=tab==='trend'?'block':'none';
+  el('tabPie').style.display=tab==='pie'?'block':'none';
+  el('tabMerchants').style.display=tab==='merchants'?'block':'none';
+  document.querySelectorAll('.tab').forEach((b,i)=>{
+    b.classList.toggle('active',['trend','pie','merchants'][i]===tab);
+  });
+  redrawCharts();
+}
+
+// ── Render everything ─────────────────────────────────────────────────────────
+function renderAll(){
+  const d=compute(allTx);
+  renderHeader(d);
+  renderCatBars(d);
+  redrawCharts(d);
+  renderInsights(d);
+  renderTxList();
+}
+
+function renderHeader(d){
+  const pos=d.balance>=0;
+  el('balanceAmt').textContent=(pos?'':'-')+pkr(d.balance);
+  el('balanceAmt').style.color=pos?'#22d3ee':'#f87171';
+  el('totalIn').textContent=pkr(d.totalIncome);
+  el('totalOut').textContent=pkr(d.totalSpent);
+  el('savedPct').textContent=(d.savingsRate*100).toFixed(0)+'%';
+  el('txCount').textContent=allTx.filter(t=>t.type==='debit'||t.type==='credit').length;
+
+  // Health ring
+  const ring=el('healthRing');
+  const circ=2*Math.PI*50;
+  ring.style.strokeDashoffset=circ-(d.score/100)*circ;
+  const col=d.score>=75?'#10b981':d.score>=50?'#f59e0b':'#ef4444';
+  ring.style.stroke=col;
+  el('healthScore').textContent=d.score;
+  el('healthScore').style.fill=col;
+  const lbl=d.score>=75?'Excellent':d.score>=50?'Good':d.score>=40?'Fair':'Needs Work';
+  el('healthLabel').textContent=lbl;
+  el('healthLabel').style.cssText=`font-size:.72rem;padding:2px 10px;border-radius:999px;background:${col}20;color:${col};font-weight:600`;
+  el('healthHint').textContent=isParentView?'Based on savings rate, spending diversity and income.':'Save more to level up your score! 🎮';
+}
+
+function renderCatBars(d){
+  const container=el('catBars');
+  container.innerHTML='';
+  d.topCats.slice(0,6).forEach(c=>{
+    const pct=d.totalSpent>0?(c.amount/d.totalSpent)*100:0;
+    container.innerHTML+=`
+      <div class="cat-bar-wrap">
+        <div class="cat-bar-header">
+          <div class="cat-icon-name">
+            <div class="cat-icon" style="background:${catColor(c.cat)}20;color:${catColor(c.cat)}">${catIcon(c.cat)}</div>
+            <span class="sub">${catLabel(c.cat)}</span>
+          </div>
+          <span style="font-weight:600;font-size:.78rem">${pkr(c.amount)}</span>
+        </div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${catColor(c.cat)}"></div></div>
+      </div>`;
+  });
+}
+
+function redrawCharts(d){
+  if(!d)d=compute(allTx);
+  const textColor=isDark?'#8b949e':'#57606a';
+  const gridColor=isDark?'#21262d':'#e5e7eb';
+
+  // Trend
+  if(trendChartObj)trendChartObj.destroy();
+  const tc=el('trendChart').getContext('2d');
+  trendChartObj=new Chart(tc,{type:'line',data:{
+    labels:d.days.map(x=>x.day),
+    datasets:[{label:'Spent',data:d.days.map(x=>x.spent),borderColor:'#ef4444',backgroundColor:'#ef444418',fill:true,tension:.3,pointRadius:3,borderWidth:2}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:textColor,font:{size:10}},grid:{color:gridColor}},y:{ticks:{color:textColor,font:{size:10},callback:v=>pkrS(v)},grid:{color:gridColor}}}}});
+
+  // Pie
+  if(pieChartObj)pieChartObj.destroy();
+  const pc=el('pieChart').getContext('2d');
+  pieChartObj=new Chart(pc,{type:'doughnut',data:{
+    labels:d.topCats.slice(0,7).map(c=>catLabel(c.cat)),
+    datasets:[{data:d.topCats.slice(0,7).map(c=>Math.round(c.amount)),backgroundColor:d.topCats.slice(0,7).map(c=>catColor(c.cat)),borderWidth:2,borderColor:isDark?'#161b22':'#fff'}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:textColor,font:{size:10},boxWidth:10,padding:8}}}}});
+
+  // Merchants
+  if(merchantChartObj)merchantChartObj.destroy();
+  const mc=el('merchantChart').getContext('2d');
+  merchantChartObj=new Chart(mc,{type:'bar',data:{
+    labels:d.topM.map(x=>x.m),
+    datasets:[{label:'Spent',data:d.topM.map(x=>Math.round(x.amount)),backgroundColor:'#6366f180',borderColor:'#6366f1',borderWidth:1,borderRadius:5}]
+  },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:textColor,font:{size:10},callback:v=>pkrS(v)},grid:{color:gridColor}},y:{ticks:{color:textColor,font:{size:10}},grid:{display:false}}}}});
+}
+
+function renderInsights(d){
+  const ins=buildInsights(d);
+  el('insightCount').textContent=`(${ins.length})`;
+  const sevColor={high:'#ef4444',medium:'#f59e0b',low:'#10b981'};
+  const typeColor={achievement:'#10b981',tip:'#6366f1'};
+  el('insightsList').innerHTML=ins.map(i=>{
+    const col=i.type?typeColor[i.type]:i.sev?sevColor[i.sev]:'#22d3ee';
+    const badge=i.sev?`<span class="badge" style="background:${col}20;color:${col}">${i.sev}</span>`:'';
+    return `<div class="insight" style="background:${col}10;border:1px solid ${col}25">
+      <div class="insight-emoji">${i.e}</div>
+      <div><div class="insight-title">${i.title}${badge}</div>
+      <div class="insight-desc muted">${i.desc}</div></div></div>`;
+  }).join('');
+}
+
+// ── Transaction list ──────────────────────────────────────────────────────────
+function renderTxList(){
+  // Build filter buttons from actual categories in data
+  const cats=[...new Set(allTx.filter(t=>t.type==='debit'||t.type==='credit').map(t=>t.category||'Other'))].sort();
+  const filterHtml=`<button class="pill${txFilter==='all'?' active':''}" onclick="setFilter('all')">All (${allTx.filter(t=>t.type==='debit'||t.type==='credit').length})</button>`
+    +cats.map(c=>`<button class="pill${txFilter===c?' active':''}" onclick="setFilter('${c}')">${catIcon(c)} ${catLabel(c)}</button>`).join('');
+  el('txFilter').innerHTML=filterHtml;
+
+  const filtered=allTx.filter(t=>(t.type==='debit'||t.type==='credit')&&(txFilter==='all'||t.category===txFilter));
+  const reversed=[...filtered].reverse(); // newest first
+  const shown=showAll?reversed:reversed.slice(0,8);
+  el('txTotal').textContent=`(${filtered.length})`;
+
+  el('txList').innerHTML=shown.map(tx=>{
+    const col=catColor(tx.category||'Other');
+    const sign=tx.type==='debit'?'−':'+';
+    const amtCol=tx.type==='debit'?'#f87171':'#4ade80';
+    const d=new Date(tx.date);
+    const dateStr=d.toLocaleDateString('en-PK',{day:'numeric',month:'short'})+ ' ' +d.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="tx-row">
+      <div class="tx-icon" style="background:${col}18;color:${col}">${catIcon(tx.category||'Other')}</div>
+      <div style="flex:1;min-width:0">
+        <div class="tx-merchant">${tx.merchant||'Unknown'}</div>
+        <div class="tx-meta muted">${dateStr}${tx.bank?' · '+tx.bank:''}</div>
+      </div>
+      <div>
+        <div class="tx-amount" style="color:${amtCol}">${sign}${pkr(tx.amount)}</div>
+        <div class="tx-cat muted" style="color:${col}">${catLabel(tx.category||'Other')}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const btn=el('showMoreBtn');
+  if(filtered.length>8){
+    btn.style.display='block';
+    btn.textContent=showAll?'▲ Show less':`▼ Show all ${filtered.length} transactions`;
+  } else {
+    btn.style.display='none';
+  }
+}
+
+function setFilter(f){txFilter=f;showAll=false;renderTxList();}
+function toggleShowAll(){showAll=!showAll;renderTxList();}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+renderAll();
+</script>
+</body>
+</html>
